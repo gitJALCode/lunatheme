@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<!--
+  Luna Theme — static UI preview.
+  This is a design preview only (mock data, no backend). Open it directly in any
+  browser on Windows to see how the Luna panel looks. Requires internet on first
+  load for the Tailwind + Font Awesome CDNs.
+-->
+<html lang="en" class="luna-dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luna Panel — UI Preview</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+    />
+
+    <script>
+        // Luna palette pulled directly from tailwind.config.js so classes render identically.
+        const luna = {
+            50: '#f8fafc',
+            100: '#eef0f5',
+            200: '#c5cad6',
+            300: '#9aa1b1',
+            400: '#6b7280',
+            500: '#414856',
+            600: '#272c37',
+            700: '#171a21',
+            800: '#0f1217',
+            900: '#0a0c10',
+        };
+        const indigo = {
+            50: '#eef0ff',
+            100: '#e0e2ff',
+            200: '#c3c7ff',
+            300: '#9ba1ff',
+            400: '#7c83ff',
+            500: '#5b63f5',
+            600: '#4f46e5',
+            700: '#4338ca',
+            800: '#3730a3',
+            900: '#312e81',
+        };
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        header: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+                        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        black: '#0a0c10',
+                        primary: indigo,
+                        blue: indigo,
+                        indigo: indigo,
+                        cyan: indigo,
+                        gray: luna,
+                        neutral: luna,
+                    },
+                    fontSize: { '2xs': '0.625rem' },
+                    borderRadius: { xl: '0.875rem', '2xl': '1.125rem' },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        body { font-family: '"IBM Plex Sans"', system-ui, sans-serif; }
+
+        /* Custom scrollbar to match the panel */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #272c37; border-radius: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* Server card radial glow + hover, mirroring ServerRow.tsx */
+        .luna-card { position: relative; overflow: hidden; transition: all 150ms; }
+        .luna-card::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; height: 100%; width: 33%;
+            pointer-events: none;
+            background: radial-gradient(circle at 100% 50%, rgba(79, 70, 229, 0.18), transparent 70%);
+        }
+        .luna-card:hover {
+            border-color: #4f46e5;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        }
+
+        .sign-in-btn {
+            background-image: linear-gradient(135deg, #5b63f5 0%, #4f46e5 100%);
+        }
+        .sign-in-btn:hover { filter: brightness(1.08); }
+
+        .hero-side {
+            background-image: linear-gradient(160deg, #1b1f5c 0%, #312e81 45%, #0f1217 100%);
+        }
+
+        /* ---- Light mode overrides (approximates GlobalStylesheet light theme) ---- */
+        html.luna-light body { background: #eef0f5; color: #171a21; }
+        html.luna-light .bg-neutral-900 { background-color: #ffffff !important; }
+        html.luna-light .bg-neutral-800 { background-color: #eef0f5 !important; }
+        html.luna-light .bg-neutral-700 { background-color: #ffffff !important; }
+        html.luna-light .bg-neutral-600 { background-color: #eef0f5 !important; }
+        html.luna-light .border-neutral-700 { border-color: #c5cad6 !important; }
+        html.luna-light .border-neutral-600 { border-color: #c5cad6 !important; }
+        html.luna-light .text-neutral-100 { color: #0f1217 !important; }
+        html.luna-light .text-neutral-200 { color: #171a21 !important; }
+        html.luna-light .text-neutral-300 { color: #414856 !important; }
+        html.luna-light .text-neutral-400 { color: #6b7280 !important; }
+        html.luna-light ::-webkit-scrollbar-thumb { background: #c5cad6; }
+    </style>
+</head>
+
+<body class="bg-neutral-800 text-neutral-200 antialiased">
+    <!-- ====================== Preview chrome (not part of the panel) ====================== -->
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-neutral-900/90 backdrop-blur border border-neutral-700 rounded-full px-2 py-1.5 shadow-2xl">
+        <span class="text-2xs uppercase tracking-widest text-neutral-400 px-2">Preview</span>
+        <button data-screen="login" class="screen-tab px-3 py-1.5 rounded-full text-xs font-medium transition-colors">Login</button>
+        <button data-screen="dashboard" class="screen-tab px-3 py-1.5 rounded-full text-xs font-medium transition-colors">Dashboard</button>
+        <button data-screen="console" class="screen-tab px-3 py-1.5 rounded-full text-xs font-medium transition-colors">Console</button>
+    </div>
+
+    <!-- ====================== LOGIN SCREEN ====================== -->
+    <section id="screen-login" class="screen min-h-screen hidden items-center justify-center p-4">
+        <div class="w-full max-w-4xl bg-neutral-700 border border-neutral-600 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+            <!-- Form side -->
+            <div class="w-full md:w-1/2 p-8 sm:p-10">
+                <div class="flex items-center gap-3 mb-8">
+                    <span id="login-logo"></span>
+                    <div>
+                        <p class="text-lg font-semibold text-neutral-100 font-header">Luna</p>
+                        <p class="text-xs text-neutral-400">Game Server Panel</p>
+                    </div>
+                </div>
+
+                <h1 class="text-2xl font-bold text-neutral-100 mb-1">Welcome back</h1>
+                <p class="text-sm text-neutral-400 mb-6">Sign in to continue to your dashboard.</p>
+
+                <form onsubmit="return false" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-neutral-300 mb-1.5">Email or Username</label>
+                        <input type="text" value="admin@luna.dev"
+                            class="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-primary-500 transition-colors" />
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-medium text-neutral-300">Password</label>
+                            <a href="#" class="text-xs text-primary-400 hover:text-primary-300">Forgot password?</a>
+                        </div>
+                        <input type="password" value="password123"
+                            class="w-full bg-neutral-800 border border-neutral-600 rounded-lg px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-primary-500 transition-colors" />
+                    </div>
+                    <button type="submit"
+                        class="sign-in-btn w-full text-white font-medium rounded-lg py-2.5 text-sm transition-all">
+                        Sign In
+                    </button>
+                    <p class="text-center text-xs text-neutral-400">
+                        New user? <a href="#" class="text-primary-400 hover:text-primary-300 font-medium">Register</a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- Hero side -->
+            <div class="hero-side hidden md:flex md:w-1/2 relative items-center justify-center p-10 overflow-hidden">
+                <div class="absolute top-10 right-12 w-20 h-20 rounded-full bg-white/90 shadow-[0_0_60px_rgba(255,255,255,0.5)]"></div>
+                <div class="absolute top-16 right-20 w-16 h-16 rounded-full hero-side"></div>
+                <i class="fa-solid fa-star absolute top-24 left-12 text-white/40 text-xs"></i>
+                <i class="fa-solid fa-star absolute top-40 left-24 text-white/30 text-2xs"></i>
+                <i class="fa-solid fa-star absolute bottom-32 right-16 text-white/40 text-xs"></i>
+                <i class="fa-solid fa-star absolute bottom-20 left-16 text-white/20 text-sm"></i>
+                <div class="relative z-10 text-center">
+                    <h2 class="text-2xl font-bold text-white font-header mb-2">Manage your universe</h2>
+                    <p class="text-sm text-indigo-100/80 max-w-xs mx-auto">
+                        Deploy, monitor and control your game servers from one beautiful place.
+                    </p>
+                </div>
+                <p class="absolute bottom-5 left-0 right-0 text-center text-2xs text-indigo-100/50">
+                    Powered by Pterodactyl
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================== DASHBOARD + CONSOLE (share the sidebar layout) ====================== -->
+    <section id="screen-app" class="screen hidden">
+        <div class="flex min-h-screen w-full">
+            <!-- Sidebar -->
+            <aside id="sidebar"
+                class="bg-neutral-900 border-r border-neutral-700 flex flex-col flex-shrink-0 sticky top-0 h-screen z-30 transition-all duration-200"
+                style="width: 248px;">
+                <div class="flex items-center justify-between px-4 h-16 flex-shrink-0">
+                    <div class="flex items-center gap-2">
+                        <span id="side-logo"></span>
+                        <span class="side-label text-lg font-semibold text-neutral-100 font-header">Luna</span>
+                    </div>
+                    <div class="side-label flex items-center gap-1">
+                        <button id="theme-toggle" title="Toggle theme"
+                            class="h-8 w-8 inline-flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 transition-colors">
+                            <i class="fa-solid fa-sun"></i>
+                        </button>
+                        <button id="collapse-btn" title="Collapse sidebar"
+                            class="h-8 w-8 inline-flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 transition-colors">
+                            <i class="fa-solid fa-angle-left"></i>
+                        </button>
+                    </div>
+                    <button id="expand-btn" title="Expand sidebar"
+                        class="hidden h-8 w-8 mx-auto items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 transition-colors">
+                        <i class="fa-solid fa-angle-right"></i>
+                    </button>
+                </div>
+
+                <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4">
+                    <p class="side-label uppercase text-2xs font-semibold tracking-widest text-neutral-400 px-3 mt-5 mb-2">Account</p>
+                    <a href="#" class="nav-link active flex items-center gap-3 px-3 py-2.5 my-0.5 rounded-lg text-sm font-medium no-underline transition-colors">
+                        <i class="fa-solid fa-server w-4 text-center"></i><span class="side-label truncate">Servers</span>
+                    </a>
+                    <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 my-0.5 rounded-lg text-sm font-medium no-underline transition-colors">
+                        <i class="fa-solid fa-user w-4 text-center"></i><span class="side-label truncate">Profile</span>
+                    </a>
+                    <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 my-0.5 rounded-lg text-sm font-medium no-underline transition-colors">
+                        <i class="fa-solid fa-shield-alt w-4 text-center"></i><span class="side-label truncate">Security</span>
+                    </a>
+                    <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 my-0.5 rounded-lg text-sm font-medium no-underline transition-colors">
+                        <i class="fa-solid fa-key w-4 text-center"></i><span class="side-label truncate">API Credentials</span>
+                    </a>
+
+                    <p class="side-label uppercase text-2xs font-semibold tracking-widest text-neutral-400 px-3 mt-5 mb-2">System</p>
+                    <a href="#" class="nav-link flex items-center gap-3 px-3 py-2.5 my-0.5 rounded-lg text-sm font-medium no-underline transition-colors">
+                        <i class="fa-solid fa-sliders w-4 text-center"></i><span class="side-label truncate">Admin</span>
+                    </a>
+                </nav>
+
+                <div class="border-t border-neutral-700 p-3 flex-shrink-0">
+                    <div id="user-card" class="flex items-center gap-3 rounded-lg px-2 py-2">
+                        <div class="h-9 w-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-primary-600 bg-primary-600 flex items-center justify-center text-white text-sm font-semibold">A</div>
+                        <div class="side-label flex-1 min-w-0">
+                            <p class="text-sm font-medium text-neutral-100 truncate">admin</p>
+                            <p class="text-xs text-neutral-400 truncate">admin@luna.dev</p>
+                        </div>
+                        <button class="side-label h-8 w-8 inline-flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 transition-colors" title="Sign out">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main area -->
+            <main class="flex-1 min-w-0 min-h-screen bg-neutral-800">
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="p-6 lg:p-8 max-w-6xl mx-auto">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 class="text-2xl font-bold text-neutral-100">Your Servers</h1>
+                            <p class="text-sm text-neutral-400 mt-0.5">Manage and monitor all of your game servers.</p>
+                        </div>
+                        <button class="sign-in-btn text-white text-sm font-medium rounded-lg px-4 py-2.5 inline-flex items-center gap-2">
+                            <i class="fa-solid fa-folder-plus"></i> Create Folder
+                        </button>
+                    </div>
+
+                    <div class="relative mb-6">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 text-sm"></i>
+                        <input id="server-search" type="text" placeholder="Search servers..."
+                            class="w-full bg-neutral-700 border border-neutral-600 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-primary-500 transition-colors" />
+                    </div>
+
+                    <!-- Folder row -->
+                    <div class="mb-4">
+                        <div id="folder-header"
+                            class="luna-card bg-neutral-700 border border-neutral-600 rounded-xl p-4 flex items-center gap-3 cursor-pointer">
+                            <i class="fa-solid fa-chevron-right transition-transform" id="folder-caret"></i>
+                            <span class="h-9 w-9 rounded-lg flex items-center justify-center" style="background:#4f46e5">
+                                <i class="fa-solid fa-folder text-white"></i>
+                            </span>
+                            <div class="flex-1 relative z-10">
+                                <p class="text-sm font-semibold text-neutral-100">Production</p>
+                                <p class="text-xs text-neutral-400">2 servers</p>
+                            </div>
+                            <button class="relative z-10 h-8 w-8 inline-flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                            <button class="relative z-10 h-8 w-8 inline-flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-400 hover:bg-neutral-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                        </div>
+                        <div id="folder-body" class="hidden mt-3 pl-4 border-l-2 border-neutral-600 ml-5 space-y-3"></div>
+                    </div>
+
+                    <!-- Ungrouped servers -->
+                    <div id="server-list" class="space-y-3"></div>
+                </div>
+
+                <!-- CONSOLE VIEW -->
+                <div id="view-console" class="hidden p-6 lg:p-8 max-w-6xl mx-auto">
+                    <div class="bg-green-500/15 border border-green-500/30 text-green-300 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span class="text-sm font-medium">Welcome back! Your server is running smoothly.</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                        <!-- Power card -->
+                        <div class="luna-card bg-neutral-700 border border-neutral-600 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-1 relative z-10">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                <span class="text-xs font-medium text-neutral-300">Online</span>
+                            </div>
+                            <p class="text-lg font-semibold text-neutral-100 relative z-10">Survival SMP</p>
+                            <p class="text-xs text-neutral-400 mb-4 relative z-10">node-eu-01 · 1.20.4</p>
+                            <div class="grid grid-cols-3 gap-2 relative z-10">
+                                <button class="bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg py-2 transition-colors"><i class="fa-solid fa-play mr-1"></i>Start</button>
+                                <button class="bg-neutral-600 hover:bg-neutral-500 text-white text-xs font-medium rounded-lg py-2 transition-colors"><i class="fa-solid fa-rotate mr-1"></i>Restart</button>
+                                <button class="bg-red-600 hover:bg-red-500 text-white text-xs font-medium rounded-lg py-2 transition-colors"><i class="fa-solid fa-stop mr-1"></i>Stop</button>
+                            </div>
+                        </div>
+
+                        <!-- Banner -->
+                        <div class="lg:col-span-2 hero-side rounded-xl p-6 flex items-center justify-between overflow-hidden relative">
+                            <div class="relative z-10">
+                                <p class="text-white text-lg font-bold font-header">Survival SMP</p>
+                                <p class="text-indigo-100/80 text-sm">play.luna.dev:25565</p>
+                            </div>
+                            <div class="w-16 h-16 rounded-full bg-white/90 shadow-[0_0_40px_rgba(255,255,255,0.4)] relative z-10"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stat cards -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4" id="console-stats"></div>
+
+                    <!-- Console -->
+                    <div class="luna-card bg-neutral-900 border border-neutral-700 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-3 relative z-10">
+                            <i class="fa-solid fa-terminal text-primary-400 text-sm"></i>
+                            <span class="text-sm font-medium text-neutral-200">Console</span>
+                        </div>
+                        <div class="font-mono text-xs leading-relaxed text-neutral-300 space-y-1 relative z-10">
+                            <p><span class="text-neutral-500">[12:01:33]</span> <span class="text-green-400">[INFO]</span> Starting minecraft server version 1.20.4</p>
+                            <p><span class="text-neutral-500">[12:01:34]</span> <span class="text-green-400">[INFO]</span> Loading properties</p>
+                            <p><span class="text-neutral-500">[12:01:36]</span> <span class="text-green-400">[INFO]</span> Preparing level "world"</p>
+                            <p><span class="text-neutral-500">[12:01:39]</span> <span class="text-yellow-400">[WARN]</span> Can't keep up! Is the server overloaded?</p>
+                            <p><span class="text-neutral-500">[12:01:41]</span> <span class="text-green-400">[INFO]</span> Done (5.812s)! For help, type "help"</p>
+                            <p class="text-primary-300">&gt; <span class="animate-pulse">_</span></p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </section>
+
+    <script>
+        // ----- Luna crescent logo (mirrors LunaLogo.tsx) -----
+        function lunaLogo(size) {
+            return `<svg width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs><linearGradient id="g${size}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7c83ff"/><stop offset="1" stop-color="#4f46e5"/></linearGradient></defs>
+                <circle cx="24" cy="24" r="24" fill="#ffffff"/>
+                <path d="M24 0 A24 24 0 0 0 24 48 Z" fill="url(#g${size})"/></svg>`;
+        }
+        document.getElementById('login-logo').innerHTML = lunaLogo(40);
+        document.getElementById('side-logo').innerHTML = lunaLogo(32);
+
+        // ----- Mock data -----
+        const servers = [
+            { name: 'Survival SMP', desc: 'Main community world', status: 'online', cpu: '42.3%', cpuLimit: '200%', mem: '3.2 GiB', memLimit: '6 GiB', disk: '12.4 GiB', diskLimit: '20 GiB', ip: 'play.luna.dev:25565', folder: 'prod' },
+            { name: 'Creative Build', desc: 'Staff build server', status: 'online', cpu: '8.1%', cpuLimit: '100%', mem: '900 MiB', memLimit: '4 GiB', disk: '5.1 GiB', diskLimit: '15 GiB', ip: '10.0.0.4:25566', folder: 'prod' },
+            { name: 'Rust Main', desc: 'Wiped weekly', status: 'offline', cpu: '0.0%', cpuLimit: '400%', mem: '0 Bytes', memLimit: '8 GiB', disk: '24.0 GiB', diskLimit: '40 GiB', ip: '10.0.0.7:28015', folder: null },
+            { name: 'Discord Bot', desc: 'Node.js process', status: 'online', cpu: '1.2%', cpuLimit: '50%', mem: '128 MiB', memLimit: '512 MiB', disk: '240 MiB', diskLimit: '2 GiB', ip: '10.0.0.9:3000', folder: null },
+            { name: 'Test Box', desc: 'Suspended for billing', status: 'suspended', cpu: '0.0%', cpuLimit: '100%', mem: '0 Bytes', memLimit: '2 GiB', disk: '1.0 GiB', diskLimit: '10 GiB', ip: '10.0.0.12:25577', folder: null },
+        ];
+
+        const statusMeta = {
+            online: { dot: 'bg-green-500', label: 'Online' },
+            offline: { dot: 'bg-red-500', label: 'Offline' },
+            suspended: { dot: 'bg-red-500', label: 'Suspended' },
+        };
+
+        function stat(icon, value, limit) {
+            return `<div class="flex items-center gap-2">
+                <i class="fa-solid ${icon} text-neutral-500 text-xs"></i>
+                <span class="text-sm font-medium text-neutral-200">${value}</span>
+                <span class="text-xs text-neutral-500">/ ${limit}</span></div>`;
+        }
+
+        function serverCard(s) {
+            const m = statusMeta[s.status];
+            return `<a href="#" data-name="${s.name.toLowerCase()}" class="server-card luna-card block bg-neutral-700 border border-neutral-600 rounded-xl p-5 no-underline">
+                <div class="flex items-start justify-between relative z-10">
+                    <div class="min-w-0">
+                        <p class="text-base font-semibold text-neutral-100 truncate">${s.name}</p>
+                        <p class="text-sm text-neutral-400 truncate mt-0.5">${s.desc}</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 ml-4">
+                        <span class="w-2 h-2 rounded-full ${m.dot}"></span>
+                        <span class="text-xs font-medium text-neutral-300">${m.label}</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 relative z-10">
+                    ${stat('fa-microchip', s.cpu, s.cpuLimit)}
+                    ${stat('fa-memory', s.mem, s.memLimit)}
+                    ${stat('fa-hard-drive', s.disk, s.diskLimit)}
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-ethernet text-neutral-500 text-xs"></i>
+                        <span class="text-sm font-medium text-neutral-200">${s.ip}</span>
+                    </div>
+                </div>
+            </a>`;
+        }
+
+        // Render server lists
+        const folderBody = document.getElementById('folder-body');
+        const serverList = document.getElementById('server-list');
+        folderBody.innerHTML = servers.filter((s) => s.folder === 'prod').map(serverCard).join('');
+        serverList.innerHTML = servers.filter((s) => !s.folder).map(serverCard).join('');
+
+        // Console stat cards
+        const consoleStats = [
+            { icon: 'fa-microchip', label: 'CPU Load', value: '42.3%', sub: 'of 200%' },
+            { icon: 'fa-memory', label: 'Memory', value: '3.2 GiB', sub: 'of 6 GiB' },
+            { icon: 'fa-hard-drive', label: 'Disk', value: '12.4 GiB', sub: 'of 20 GiB' },
+            { icon: 'fa-network-wired', label: 'Network', value: '128 KB/s', sub: 'in / out' },
+        ];
+        document.getElementById('console-stats').innerHTML = consoleStats.map((c) =>
+            `<div class="luna-card bg-neutral-700 border border-neutral-600 rounded-xl p-4">
+                <div class="flex items-center gap-2 text-neutral-400 mb-2 relative z-10">
+                    <i class="fa-solid ${c.icon} text-primary-400"></i>
+                    <span class="text-xs font-medium uppercase tracking-wide">${c.label}</span>
+                </div>
+                <p class="text-xl font-bold text-neutral-100 relative z-10">${c.value}</p>
+                <p class="text-xs text-neutral-500 relative z-10">${c.sub}</p>
+            </div>`).join('');
+
+        // ----- Active nav link styling -----
+        const navLinks = document.querySelectorAll('.nav-link');
+        function paintNav() {
+            navLinks.forEach((l) => {
+                l.classList.remove('bg-primary-600', 'text-white');
+                l.classList.add('text-neutral-300');
+                if (l.classList.contains('active')) {
+                    l.classList.add('bg-primary-600', 'text-white');
+                    l.classList.remove('text-neutral-300');
+                } else {
+                    l.classList.add('hover:bg-neutral-700', 'hover:text-neutral-100');
+                }
+            });
+        }
+        navLinks.forEach((l) =>
+            l.addEventListener('click', (e) => {
+                e.preventDefault();
+                navLinks.forEach((x) => x.classList.remove('active'));
+                l.classList.add('active');
+                paintNav();
+            })
+        );
+        paintNav();
+
+        // ----- Sidebar collapse -----
+        const sidebar = document.getElementById('sidebar');
+        const sideLabels = document.querySelectorAll('.side-label');
+        const expandBtn = document.getElementById('expand-btn');
+        const collapseBtn = document.getElementById('collapse-btn');
+        let collapsed = false;
+        function applyCollapse() {
+            sidebar.style.width = collapsed ? '76px' : '248px';
+            sideLabels.forEach((el) => el.classList.toggle('hidden', collapsed));
+            expandBtn.classList.toggle('hidden', !collapsed);
+            expandBtn.classList.toggle('flex', collapsed);
+            document.querySelectorAll('.nav-link').forEach((l) => l.classList.toggle('justify-center', collapsed));
+            document.getElementById('user-card').classList.toggle('justify-center', collapsed);
+        }
+        collapseBtn.addEventListener('click', () => { collapsed = true; applyCollapse(); });
+        expandBtn.addEventListener('click', () => { collapsed = false; applyCollapse(); });
+
+        // ----- Theme toggle (persisted, same key as the real store) -----
+        const STORAGE_KEY = 'luna::theme';
+        const themeToggle = document.getElementById('theme-toggle');
+        function applyTheme(mode) {
+            const html = document.documentElement;
+            html.classList.toggle('luna-light', mode === 'light');
+            html.classList.toggle('luna-dark', mode === 'dark');
+            themeToggle.querySelector('i').className = mode === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            localStorage.setItem(STORAGE_KEY, mode);
+        }
+        applyTheme(localStorage.getItem(STORAGE_KEY) || 'dark');
+        themeToggle.addEventListener('click', () => {
+            const next = document.documentElement.classList.contains('luna-light') ? 'dark' : 'light';
+            applyTheme(next);
+        });
+
+        // ----- Folder expand -----
+        const folderHeader = document.getElementById('folder-header');
+        const folderCaret = document.getElementById('folder-caret');
+        folderHeader.addEventListener('click', () => {
+            const open = folderBody.classList.toggle('hidden');
+            folderCaret.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+        });
+
+        // ----- Search filter -----
+        document.getElementById('server-search').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            document.querySelectorAll('.server-card').forEach((card) => {
+                card.style.display = card.dataset.name.includes(q) ? '' : 'none';
+            });
+        });
+
+        // ----- Screen / view switching -----
+        const tabs = document.querySelectorAll('.screen-tab');
+        function showScreen(screen) {
+            document.getElementById('screen-login').classList.toggle('hidden', screen !== 'login');
+            document.getElementById('screen-login').classList.toggle('flex', screen === 'login');
+            document.getElementById('screen-app').classList.toggle('hidden', screen === 'login');
+
+            if (screen !== 'login') {
+                document.getElementById('view-dashboard').classList.toggle('hidden', screen !== 'dashboard');
+                document.getElementById('view-console').classList.toggle('hidden', screen !== 'console');
+            }
+
+            tabs.forEach((t) => {
+                const on = t.dataset.screen === screen;
+                t.classList.toggle('bg-primary-600', on);
+                t.classList.toggle('text-white', on);
+                t.classList.toggle('text-neutral-400', !on);
+                t.classList.toggle('hover:text-neutral-100', !on);
+            });
+        }
+        tabs.forEach((t) => t.addEventListener('click', () => showScreen(t.dataset.screen)));
+        showScreen('dashboard');
+    </script>
+</body>
+</html>

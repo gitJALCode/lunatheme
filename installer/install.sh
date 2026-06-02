@@ -31,7 +31,7 @@ LUNA_RELEASE_TARBALL="${LUNA_RELEASE_TARBALL:-https://github.com/gitJALCode/luna
 
 PANEL_DIR="/var/www/pterodactyl"
 PHP_VERSION="8.3"
-NODE_MAJOR="20"
+NODE_MAJOR="22"
 
 WINGS_VERSION="${WINGS_VERSION:-latest}"
 

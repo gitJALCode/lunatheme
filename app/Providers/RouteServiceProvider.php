@@ -37,6 +37,11 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->routes(function () {
             Route::middleware('web')->group(function () {
+                // Store routes are registered before the authenticated base routes
+                // so the public "/order" pages are not captured by the catch-all
+                // React route that requires authentication.
+                Route::group([], base_path('routes/store.php'));
+
                 Route::middleware(['auth.session', RequireTwoFactorAuthentication::class])
                     ->group(base_path('routes/base.php'));
 

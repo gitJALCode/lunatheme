@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader --no-interaction
@@ -48,7 +48,10 @@ jobs:
             --exclude='./node_modules' \
             --exclude='./installer' \
             --exclude='./tests' \
+            --exclude='./preview' \
             --exclude='./panel.tar.gz' \
+            --exclude='./.env' \
+            --exclude='./.env.ci' \
             .
 
       - name: Upload release asset

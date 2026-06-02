@@ -6,7 +6,7 @@ import TransitionRouter from '@/TransitionRouter';
 import { useLocation } from 'react-router';
 import Spinner from '@/components/elements/Spinner';
 import routes from '@/routers/routes';
-import { faCogs, faLayerGroup, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import { faCogs, faLayerGroup, faUserCircle, faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 import { useStoreState } from '@/state/hooks';
 import { usePersistedState } from '@/plugins/usePersistedState';
 import Sidebar, { LayoutWrapper, MainArea, SidebarLink, SidebarExternalLink, SidebarSection } from '@/components/elements/sidebar/Sidebar';
@@ -23,6 +23,7 @@ export default () => {
             <Sidebar collapsed={!!collapsed} onToggleCollapse={() => setCollapsed((c) => !c)}>
                 <SidebarSection label={'Navigation'} collapsed={!!collapsed}>
                     <SidebarLink to={'/'} exact icon={faLayerGroup} label={'Servers'} collapsed={!!collapsed} />
+                    <SidebarLink to={'/order'} icon={faShoppingCart} label={'Order a server'} collapsed={!!collapsed} />
                     <SidebarLink to={'/account'} icon={faUserCircle} label={'Account'} collapsed={!!collapsed} />
                     {rootAdmin && (
                         <SidebarExternalLink href={'/admin'} icon={faCogs} label={'Admin'} collapsed={!!collapsed} />

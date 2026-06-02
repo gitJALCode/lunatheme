@@ -41,7 +41,7 @@ You'll get a menu:
 
 ## What the panel installer does
 
-1. Installs PHP 8.3, MariaDB, nginx, Redis, Composer (and Node 20 + Yarn only if
+1. Installs PHP 8.3, MariaDB, nginx, Redis, Composer (and Node 22 + Yarn only if
    it has to build from source).
 2. Fetches the panel:
    - downloads the prebuilt `panel.tar.gz` from your latest GitHub Release if one

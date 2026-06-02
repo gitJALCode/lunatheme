@@ -24,11 +24,12 @@ bash <(curl -sSL https://raw.githubusercontent.com/gitJALCode/lunatheme/main/ins
 
 You'll get a menu:
 
-- `[0]` Install the Luna panel
-- `[1]` Install stock Wings
-- `[2]` Install both (panel first, then Wings)
-- `[3]` Uninstall the panel and/or Wings
-- `[4]` Exit
+- `[0]` Install the Luna panel (fresh)
+- `[1]` Upgrade existing panel to Luna
+- `[2]` Install stock Wings
+- `[3]` Install both (panel first, then Wings)
+- `[4]` Uninstall the panel and/or Wings
+- `[5]` Exit
 
 ### Distro differences handled automatically
 
@@ -51,6 +52,32 @@ You'll get a menu:
    Luna avatar upload feature), and creates your admin account.
 4. Configures the `pteroq` queue worker, the scheduler cron entry, nginx, and an
    optional free Let's Encrypt SSL certificate.
+
+## Upgrading an existing panel
+
+Use menu option **`[1] Upgrade existing panel to Luna`** when Pterodactyl (or Luna)
+is already installed at `/var/www/pterodactyl`. This is safe for production servers:
+
+- Keeps your existing `.env`, database, users, and servers
+- Does **not** regenerate `APP_KEY`, re-seed, or create a new admin
+- Optionally backs up `.env`, `storage/`, and a database dump to
+  `/root/luna-panel-backups/<timestamp>/`
+- Downloads the latest `panel.tar.gz` release (recommended) or updates via git
+- Runs `composer install`, `migrate --force`, `storage:link`, and restarts services
+
+Requirements:
+
+- Panel must exist at `/var/www/pterodactyl` with `artisan` and `.env`
+- For git-based upgrades without a release tarball, the panel directory must
+  already be a git checkout (the script can repoint upstream Pterodactyl remotes
+  to Luna after confirmation)
+
+Example — upgrade from stock Pterodactyl to Luna on an existing server:
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/gitJALCode/lunatheme/main/installer/install.sh)
+# choose [1]
+```
 
 ## What the Wings installer does
 

@@ -37,6 +37,10 @@ WINGS_VERSION="${WINGS_VERSION:-latest}"
 
 LOG_PATH="/var/log/luna-installer.log"
 
+# Set to true by upgrade_panel(); keeps .env, skips seed/admin/key regeneration.
+UPGRADE_MODE=false
+USED_PREBUILT=false
+
 # ----------------------------------------------------------------------------
 # Colours / output helpers
 # ----------------------------------------------------------------------------
@@ -87,6 +91,57 @@ confirm() {
 
 random_password() {
     tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32
+}
+
+panel_is_installed() {
+    [ -f "${PANEL_DIR}/artisan" ] && [ -f "${PANEL_DIR}/.env" ]
+}
+
+get_panel_env_var() {
+    local key="$1"
+    [ -f "${PANEL_DIR}/.env" ] || return 1
+    grep -E "^${key}=" "${PANEL_DIR}/.env" | tail -1 | cut -d= -f2- | tr -d '"'"'"
+}
+
+backup_panel() {
+    local backup_dir="/root/luna-panel-backups/$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$backup_dir"
+
+    output "Creating backup at ${backup_dir}..."
+    cp "${PANEL_DIR}/.env" "${backup_dir}/.env"
+
+    if [ -d "${PANEL_DIR}/storage" ]; then
+        tar -czf "${backup_dir}/storage.tar.gz" -C "$PANEL_DIR" storage 2>/dev/null || \
+            warn "Could not archive storage/ (continuing anyway)."
+    fi
+
+    if command_exists mysqldump; then
+        local db_name db_user db_pass
+        db_name="$(get_panel_env_var DB_DATABASE || true)"
+        db_user="$(get_panel_env_var DB_USERNAME || true)"
+        db_pass="$(get_panel_env_var DB_PASSWORD || true)"
+        if [ -n "$db_name" ] && [ -n "$db_user" ]; then
+            output "Dumping database '${db_name}'..."
+            if MYSQL_PWD="$db_pass" mysqldump -u "$db_user" -h 127.0.0.1 "$db_name" \
+                >"${backup_dir}/database.sql" 2>/dev/null; then
+                success "Database dump saved."
+            else
+                warn "Database dump failed (continuing anyway)."
+                rm -f "${backup_dir}/database.sql"
+            fi
+        fi
+    fi
+
+    success "Backup saved to ${backup_dir}"
+}
+
+ensure_panel_runtime_dependencies() {
+    if ! command_exists php; then
+        warn "PHP not found — installing panel dependencies..."
+        install_panel_dependencies
+        return
+    fi
+    install_composer
 }
 
 # ----------------------------------------------------------------------------
@@ -279,9 +334,21 @@ download_panel_files() {
     fi
 
     if [ "$USED_PREBUILT" = false ]; then
-        output "Cloning Luna panel from ${LUNA_REPO} (${LUNA_BRANCH})..."
+        output "Fetching Luna panel from ${LUNA_REPO} (${LUNA_BRANCH})..."
         if [ -d "${PANEL_DIR}/.git" ]; then
+            local current_remote
+            current_remote="$(git -C "$PANEL_DIR" remote get-url origin 2>/dev/null || true)"
+            if [ -n "$current_remote" ] && [[ "$current_remote" != *"lunatheme"* ]]; then
+                if [ "$UPGRADE_MODE" = true ]; then
+                    warn "Panel git remote is not Luna: ${current_remote}"
+                    confirm "Point origin at ${LUNA_REPO} and update files? (.env and database are preserved)" || \
+                        fail "Upgrade cancelled."
+                fi
+                git -C "$PANEL_DIR" remote set-url origin "$LUNA_REPO"
+            fi
             git -C "$PANEL_DIR" fetch --all && git -C "$PANEL_DIR" reset --hard "origin/${LUNA_BRANCH}"
+        elif [ "$UPGRADE_MODE" = true ]; then
+            fail "Cannot build from source without a git repository. Publish panel.tar.gz to GitHub Releases or clone Luna into ${PANEL_DIR} first."
         else
             rm -rf "${PANEL_DIR:?}/"* "${PANEL_DIR:?}/".* 2>/dev/null || true
             git clone --branch "$LUNA_BRANCH" --depth 1 "$LUNA_REPO" "$PANEL_DIR"
@@ -346,6 +413,35 @@ configure_panel_env() {
 
     # Required for the Luna avatar upload feature.
     php artisan storage:link || true
+}
+
+upgrade_panel_env() {
+    cd "$PANEL_DIR"
+    [ -f .env ] || fail "Missing ${PANEL_DIR}/.env — run a fresh install instead."
+
+    output "Installing PHP dependencies..."
+    composer install --no-dev --optimize-autoloader
+
+    output "Running database migrations (existing data is preserved)..."
+    php artisan migrate --force
+
+    output "Linking public storage (Luna avatar uploads)..."
+    php artisan storage:link || true
+
+    output "Rebuilding application caches..."
+    php artisan optimize:clear
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+}
+
+restart_panel_services() {
+    output "Restarting panel services..."
+    systemctl restart "$PHP_FPM_SERVICE" 2>/dev/null || true
+    if systemctl is-enabled pteroq.service >/dev/null 2>&1; then
+        systemctl restart pteroq.service
+    fi
+    systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
 }
 
 create_admin_user() {
@@ -525,6 +621,48 @@ install_panel() {
     hr
 }
 
+upgrade_panel() {
+    hr
+    output "Upgrade existing panel to Luna"
+    hr
+
+    panel_is_installed || fail "No existing panel found at ${PANEL_DIR} (need artisan and .env). Use option [0] for a fresh install."
+
+    warn "This updates panel files and runs migrations."
+    warn "Your .env, users, servers, and database are kept."
+    warn "It does NOT regenerate APP_KEY, re-seed, or create a new admin."
+    confirm "Continue with the upgrade?" || fail "Upgrade cancelled."
+
+    if confirm "Create a backup of .env, storage/, and the database first? (recommended)"; then
+        backup_panel
+    fi
+
+    UPGRADE_MODE=true
+    ensure_panel_runtime_dependencies
+
+    cd "$PANEL_DIR"
+    output "Enabling maintenance mode..."
+    php artisan down || true
+
+    download_panel_files
+    build_panel_assets
+    upgrade_panel_env
+    set_permissions
+    restart_panel_services
+
+    output "Disabling maintenance mode..."
+    php artisan up || true
+
+    UPGRADE_MODE=false
+
+    hr
+    success "Panel upgrade complete!"
+    local app_url
+    app_url="$(get_panel_env_var APP_URL || true)"
+    [ -n "$app_url" ] && output "Visit: ${app_url}"
+    hr
+}
+
 # ----------------------------------------------------------------------------
 # Wings installation (stock / official)
 # ----------------------------------------------------------------------------
@@ -681,20 +819,22 @@ main_menu() {
     hr
     output "OS:     ${OS_ID} ${OS_VERSION} (${PKG_FAMILY})"
     hr
-    echo "  [0] Install the Luna panel"
-    echo "  [1] Install stock Wings"
-    echo "  [2] Install both (panel, then Wings)"
-    echo "  [3] Uninstall panel and/or Wings"
-    echo "  [4] Exit"
+    echo "  [0] Install the Luna panel (fresh)"
+    echo "  [1] Upgrade existing panel to Luna"
+    echo "  [2] Install stock Wings"
+    echo "  [3] Install both (panel, then Wings)"
+    echo "  [4] Uninstall panel and/or Wings"
+    echo "  [5] Exit"
     hr
     local choice
-    choice="$(ask 'Select an option 0-4' '0')"
+    choice="$(ask 'Select an option 0-5' '0')"
     case "$choice" in
         0) install_panel ;;
-        1) install_wings ;;
-        2) install_panel; install_wings ;;
-        3) uninstall_menu ;;
-        4) exit 0 ;;
+        1) upgrade_panel ;;
+        2) install_wings ;;
+        3) install_panel; install_wings ;;
+        4) uninstall_menu ;;
+        5) exit 0 ;;
         *) error "Invalid option."; sleep 1; main_menu ;;
     esac
 }

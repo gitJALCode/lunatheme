@@ -225,6 +225,23 @@ install_composer() {
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 }
 
+run_composer_install() {
+    cd "$PANEL_DIR"
+    export COMPOSER_ALLOW_SUPERUSER=1
+
+    local output
+    output="$(composer install --no-dev --optimize-autoloader --no-interaction 2>&1)" || {
+        echo "$output" >&2
+        if echo "$output" | grep -qE "not present in the lock file|lock file is not up to date"; then
+            warn "Composer lock file is out of sync with composer.json — updating dependencies..."
+            composer update --no-dev --no-interaction --with-all-dependencies || fail "Composer update failed."
+            composer install --no-dev --optimize-autoloader --no-interaction || fail "Composer install failed."
+        else
+            fail "Composer install failed."
+        fi
+    }
+}
+
 install_panel_dependencies_debian() {
     output "Configuring PHP ${PHP_VERSION} repository..."
     apt-get install -y software-properties-common apt-transport-https ca-certificates curl gnupg lsb-release >/dev/null
@@ -385,7 +402,7 @@ configure_panel_env() {
     cd "$PANEL_DIR"
     [ -f .env ] || cp .env.example .env
 
-    composer install --no-dev --optimize-autoloader
+    run_composer_install
 
     php artisan key:generate --force
 
@@ -420,7 +437,7 @@ upgrade_panel_env() {
     [ -f .env ] || fail "Missing ${PANEL_DIR}/.env — run a fresh install instead."
 
     output "Installing PHP dependencies..."
-    composer install --no-dev --optimize-autoloader
+    run_composer_install
 
     output "Running database migrations (existing data is preserved)..."
     php artisan migrate --force
@@ -644,9 +661,21 @@ upgrade_panel() {
     output "Enabling maintenance mode..."
     php artisan down || true
 
-    download_panel_files
-    build_panel_assets
-    upgrade_panel_env
+    if ! download_panel_files; then
+        php artisan up || true
+        UPGRADE_MODE=false
+        fail "Failed to download panel files."
+    fi
+    build_panel_assets || {
+        php artisan up || true
+        UPGRADE_MODE=false
+        fail "Failed to build panel assets."
+    }
+    upgrade_panel_env || {
+        php artisan up || true
+        UPGRADE_MODE=false
+        fail "Failed to update panel dependencies or database."
+    }
     set_permissions
     restart_panel_services
 

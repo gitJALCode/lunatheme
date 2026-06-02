@@ -36,3 +36,4 @@ resources/lang/locales.js
 /public/hot
 result
 /panel.tar.gz
+/composer.phar

@@ -309,6 +309,59 @@ open_firewall_rhel() {
     fi
 }
 
+open_firewall_debian() {
+    if command_exists ufw && ufw status 2>/dev/null | grep -qi "Status: active"; then
+        output "Opening UFW ports 80/443..."
+        ufw allow 80/tcp >/dev/null 2>&1 || true
+        ufw allow 443/tcp >/dev/null 2>&1 || true
+    fi
+}
+
+validate_panel_fqdn() {
+    if [[ "$FQDN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        warn "You entered an IP address instead of a domain name."
+        warn "The panel will work over HTTP, but Let's Encrypt SSL will not."
+        confirm "Continue using the IP as the panel URL?" || fail "Installation cancelled."
+    fi
+}
+
+finalize_panel_services() {
+    output "Starting and restarting web services..."
+    systemctl enable --now "$REDIS_SERVICE" mariadb "$PHP_FPM_SERVICE" nginx "$CRON_SERVICE" >/dev/null 2>&1 || true
+    systemctl enable --now pteroq.service >/dev/null 2>&1 || true
+    systemctl restart "$PHP_FPM_SERVICE" >/dev/null 2>&1 || true
+    systemctl restart pteroq.service >/dev/null 2>&1 || true
+    if nginx -t >/dev/null 2>&1; then
+        systemctl restart nginx
+    else
+        warn "nginx configuration test failed — check /var/log/nginx/error.log"
+    fi
+    if [ "$PKG_FAMILY" = "debian" ]; then
+        open_firewall_debian
+    fi
+}
+
+save_install_credentials() {
+    local cred_file="/root/luna-panel-credentials.txt"
+    cat >"$cred_file" <<EOF
+Luna Panel installation credentials
+Generated: $(date -Iseconds)
+
+Panel URL:    ${APP_SCHEME}://${FQDN}
+Admin email:  ${ADMIN_EMAIL}
+Admin user:   ${ADMIN_USER}
+
+Database:     ${DB_NAME}
+DB user:      ${DB_USER}
+DB password:  ${DB_PASS}
+DB host:      127.0.0.1
+
+Panel path:   ${PANEL_DIR}
+EOF
+    chmod 600 "$cred_file"
+    success "Credentials saved to ${cred_file}"
+}
+
 install_panel_dependencies() {
     output "Installing system dependencies (this may take a few minutes)..."
     if [ "$PKG_FAMILY" = "debian" ]; then
@@ -390,10 +443,17 @@ build_panel_assets() {
 
 configure_database() {
     output "Configuring MariaDB database..."
+    # Always (re)create the DB user with the chosen password. CREATE USER IF NOT EXISTS
+    # does not update passwords, which breaks fresh installs on servers that already
+    # had a panel database.
     mysql -u root <<SQL
 CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+DROP USER IF EXISTS '${DB_USER}'@'127.0.0.1';
+DROP USER IF EXISTS '${DB_USER}'@'localhost';
+CREATE USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
+CREATE USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1' WITH GRANT OPTION;
+GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 SQL
 }
@@ -416,7 +476,8 @@ configure_panel_env() {
         --redis-host=127.0.0.1 \
         --redis-pass="null" \
         --redis-port=6379 \
-        --settings-ui=true
+        --settings-ui=true \
+        --telemetry=false
 
     php artisan p:environment:database \
         --host=127.0.0.1 \
@@ -450,15 +511,6 @@ upgrade_panel_env() {
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
-}
-
-restart_panel_services() {
-    output "Restarting panel services..."
-    systemctl restart "$PHP_FPM_SERVICE" 2>/dev/null || true
-    if systemctl is-enabled pteroq.service >/dev/null 2>&1; then
-        systemctl restart pteroq.service
-    fi
-    systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
 }
 
 create_admin_user() {
@@ -594,8 +646,15 @@ install_panel() {
     output "Luna Panel installation"
     hr
 
+    if panel_is_installed; then
+        warn "An existing panel was detected at ${PANEL_DIR}."
+        warn "A fresh install will reset the database user password and may overwrite files."
+        confirm "Continue with a FRESH install anyway?" || fail "Cancelled — use option [1] Upgrade to update an existing panel."
+    fi
+
     FQDN="$(ask 'Panel domain (FQDN), e.g. panel.example.com')"
     [ -n "$FQDN" ] || fail "A domain is required."
+    validate_panel_fqdn
 
     TIMEZONE="$(ask 'Server timezone' "$(cat /etc/timezone 2>/dev/null || echo UTC)")"
 
@@ -630,11 +689,13 @@ install_panel() {
     configure_nginx
     set_permissions
     configure_ssl
+    finalize_panel_services
+    save_install_credentials
 
     hr
     success "Panel installation complete!"
     output "Visit: ${APP_SCHEME}://${FQDN}"
-    output "Login: ${ADMIN_EMAIL}"
+    output "Login: ${ADMIN_EMAIL} (username: ${ADMIN_USER})"
     hr
 }
 
@@ -677,7 +738,7 @@ upgrade_panel() {
         fail "Failed to update panel dependencies or database."
     }
     set_permissions
-    restart_panel_services
+    finalize_panel_services
 
     output "Disabling maintenance mode..."
     php artisan up || true

@@ -36,6 +36,46 @@
     </div>
 </div>
 <div class="row">
+    <div class="col-xs-12">
+        <div class="box {{ $storeStatus['ready'] ? 'box-success' : 'box-warning' }}">
+            <div class="box-header with-border">
+                <h3 class="box-title">Store &amp; Stripe Billing</h3>
+                <div class="box-tools pull-right">
+                    <a href="{{ $storeSettingsUrl }}" class="btn btn-sm btn-default">
+                        <i class="fa fa-cog"></i> Configure
+                    </a>
+                </div>
+            </div>
+            <div class="box-body">
+                @if($storeStatus['ready'])
+                    <p class="text-muted" style="margin-top: 0;">
+                        Your store is configured. Customers can order servers at
+                        <a href="{{ $storeOrderUrl }}" target="_blank" rel="noopener noreferrer">{{ $storeOrderUrl }}</a>.
+                    </p>
+                @else
+                    <p class="text-muted" style="margin-top: 0;">
+                        Complete the checklist below to enable the public order page and automatic server provisioning after payment.
+                    </p>
+                @endif
+                @include('partials.admin.store.status', ['status' => $storeStatus])
+                @if($storeDisabled)
+                    <div class="alert alert-warning" style="margin-top: 12px; margin-bottom: 0;">
+                        Panel settings are environment-only (<code>APP_ENVIRONMENT_ONLY=true</code>). Configure Stripe via <code>.env</code> or disable that flag to edit from the admin UI.
+                    </div>
+                @endif
+            </div>
+            <div class="box-footer">
+                <a href="{{ $storeSettingsUrl }}" class="btn btn-primary">
+                    <i class="fa fa-credit-card"></i> Open Store Settings
+                </a>
+                <a href="{{ $storeOrderUrl }}" class="btn btn-default" target="_blank" rel="noopener noreferrer">
+                    <i class="fa fa-external-link"></i> View Order Page
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
     <div class="col-xs-6 col-sm-3 text-center">
         <a href="{{ $version->getDiscord() }}"><button class="btn btn-warning" style="width:100%;"><i class="fa fa-fw fa-support"></i> Get Help <small>(via Discord)</small></button></a>
     </div>

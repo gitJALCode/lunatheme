@@ -22,9 +22,15 @@ tar -czf panel.tar.gz `
     --exclude=./panel.tar.gz `
     --exclude=./.env `
     --exclude=./.env.ci `
+    --exclude=./vendor `
     .
 
 $sizeMb = [math]::Round((Get-Item panel.tar.gz).Length / 1MB, 2)
 Write-Host "* Done: panel.tar.gz ($sizeMb MB)"
 Write-Host "  Upload at: https://github.com/gitJALCode/lunatheme/releases/new"
 Write-Host "  Asset name must be: panel.tar.gz"
+
+if (-not (Select-String -Path "composer.lock" -Pattern "stripe/stripe-php" -Quiet)) {
+    Write-Error "stripe/stripe-php missing from composer.lock. Run composer update first."
+    exit 1
+}

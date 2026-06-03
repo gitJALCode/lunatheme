@@ -30,6 +30,14 @@ class SettingsServiceProvider extends ServiceProvider
         'pterodactyl:client_features:allocations:enabled',
         'pterodactyl:client_features:allocations:range_start',
         'pterodactyl:client_features:allocations:range_end',
+        'store:stripe:key',
+        'store:stripe:secret',
+        'store:stripe:webhook_secret',
+        'store:egg_id',
+        'store:location_ids',
+        'store:plans:explorer:price_id',
+        'store:plans:builder:price_id',
+        'store:plans:community:price_id',
     ];
 
     /**
@@ -52,6 +60,8 @@ class SettingsServiceProvider extends ServiceProvider
      */
     protected static array $encrypted = [
         'mail:mailers:smtp:password',
+        'store:stripe:secret',
+        'store:stripe:webhook_secret',
     ];
 
     /**
@@ -84,7 +94,7 @@ class SettingsServiceProvider extends ServiceProvider
                 }
             }
 
-            switch (strtolower($value)) {
+            switch (strtolower((string) $value)) {
                 case 'true':
                 case '(true)':
                     $value = true;
@@ -100,6 +110,15 @@ class SettingsServiceProvider extends ServiceProvider
                 case 'null':
                 case '(null)':
                     $value = null;
+            }
+
+            if ($key === 'store:location_ids') {
+                $value = array_values(array_filter(array_map(
+                    'intval',
+                    array_filter(array_map('trim', explode(',', (string) $value)), 'strlen')
+                )));
+            } elseif ($key === 'store:egg_id') {
+                $value = $value !== '' && $value !== null ? (int) $value : null;
             }
 
             $config->set(str_replace(':', '.', $key), $value);

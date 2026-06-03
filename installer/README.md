@@ -14,6 +14,8 @@ but it deploys this fork instead of the upstream panel.
 
 A fresh VPS with root access is strongly recommended.
 
+Full publish + server steps: **[DEPLOY.md](DEPLOY.md)**.
+
 ## Quick start
 
 Run as root on the target server:

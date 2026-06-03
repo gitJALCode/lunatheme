@@ -1,24 +1,29 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, RouteComponentProps } from 'react-router-dom';
-import login from '@/api/auth/login';
+import { Link } from 'react-router-dom';
+import register from '@/api/auth/register';
 import LoginFormContainer from '@/components/auth/LoginFormContainer';
 import { useStoreState } from 'easy-peasy';
 import { Formik, FormikHelpers } from 'formik';
-import { object, string } from 'yup';
+import { object, ref, string } from 'yup';
 import Field from '@/components/elements/Field';
 import tw from 'twin.macro';
 import { css } from 'styled-components/macro';
 import Button from '@/components/elements/Button';
-import Label from '@/components/elements/Label';
 import Reaptcha from 'reaptcha';
 import useFlash from '@/plugins/useFlash';
 
 interface Values {
+    email: string;
     username: string;
+    name_first: string;
+    name_last: string;
     password: string;
+    password_confirmation: string;
 }
 
-const LoginContainer = ({ history }: RouteComponentProps) => {
+const USERNAME_REGEX = /^[a-z0-9]([\w.-]+)[a-z0-9]$/;
+
+export default () => {
     const ref = useRef<Reaptcha>(null);
     const [token, setToken] = useState('');
 
@@ -32,8 +37,6 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
     const onSubmit = (values: Values, { setSubmitting }: FormikHelpers<Values>) => {
         clearFlashes();
 
-        // If there is no token in the state yet, request the token and then abort this submit request
-        // since it will be re-submitted when the recaptcha data is returned by the component.
         if (recaptchaEnabled && !token) {
             ref.current!.execute().catch((error) => {
                 console.error(error);
@@ -45,15 +48,12 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
             return;
         }
 
-        login({ ...values, recaptchaData: token })
+        register({ ...values, recaptchaData: token })
             .then((response) => {
                 if (response.complete) {
                     // @ts-expect-error this is valid
                     window.location = response.intended || '/';
-                    return;
                 }
-
-                history.replace('/auth/login/checkpoint', { token: response.confirmationToken });
             })
             .catch((error) => {
                 console.error(error);
@@ -69,30 +69,66 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
     return (
         <Formik
             onSubmit={onSubmit}
-            initialValues={{ username: '', password: '' }}
+            initialValues={{
+                email: '',
+                username: '',
+                name_first: '',
+                name_last: '',
+                password: '',
+                password_confirmation: '',
+            }}
             validationSchema={object().shape({
-                username: string().required('A username or email must be provided.'),
-                password: string().required('Please enter your account password.'),
+                email: string()
+                    .email('A valid email address must be provided.')
+                    .required('A valid email address must be provided.'),
+                username: string()
+                    .required('A username is required.')
+                    .test(
+                        'username-format',
+                        'The username must start and end with alpha-numeric characters and contain only letters, numbers, dashes, underscores, and periods.',
+                        (value) => !value || USERNAME_REGEX.test(value.toLowerCase())
+                    ),
+                name_first: string().required('A first name is required.'),
+                name_last: string().required('A last name is required.'),
+                password: string()
+                    .required('A password is required.')
+                    .min(8, 'Your password should be at least 8 characters in length.'),
+                password_confirmation: string()
+                    .required('Your password does not match.')
+                    // @ts-expect-error this is valid
+                    .oneOf([ref('password'), null], 'Your password does not match.'),
             })}
         >
             {({ isSubmitting, setSubmitting, submitForm }) => (
                 <LoginFormContainer
-                    title={'Sign In'}
-                    subtitle={'Enter your credentials to continue'}
+                    title={'Create Account'}
+                    subtitle={'Sign up to get started'}
                     css={tw`w-full flex flex-col`}
                 >
-                    <Field type={'text'} label={'Email or Username'} name={'username'} disabled={isSubmitting} />
+                    <Field type={'email'} label={'Email'} name={'email'} disabled={isSubmitting} />
                     <div css={tw`mt-5`}>
-                        <div css={tw`flex items-center justify-between`}>
-                            <Label htmlFor={'password'}>Password</Label>
-                            <Link
-                                to={'/auth/password'}
-                                css={tw`text-xs text-primary-300 no-underline hover:text-primary-200`}
-                            >
-                                Forgot Password?
-                            </Link>
-                        </div>
-                        <Field id={'password'} type={'password'} name={'password'} disabled={isSubmitting} />
+                        <Field type={'text'} label={'Username'} name={'username'} disabled={isSubmitting} />
+                    </div>
+                    <div css={tw`mt-5 grid grid-cols-1 sm:grid-cols-2 gap-5`}>
+                        <Field type={'text'} label={'First Name'} name={'name_first'} disabled={isSubmitting} />
+                        <Field type={'text'} label={'Last Name'} name={'name_last'} disabled={isSubmitting} />
+                    </div>
+                    <div css={tw`mt-5`}>
+                        <Field
+                            type={'password'}
+                            label={'Password'}
+                            name={'password'}
+                            description={'Passwords must be at least 8 characters in length.'}
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                    <div css={tw`mt-5`}>
+                        <Field
+                            type={'password'}
+                            label={'Confirm Password'}
+                            name={'password_confirmation'}
+                            disabled={isSubmitting}
+                        />
                     </div>
                     <div css={tw`mt-6`}>
                         <Button
@@ -108,7 +144,7 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
                                 }
                             `}
                         >
-                            Sign In
+                            Register
                         </Button>
                     </div>
                     {recaptchaEnabled && (
@@ -127,9 +163,9 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
                         />
                     )}
                     <div css={tw`mt-5 text-center text-sm text-neutral-400`}>
-                        New user?{' '}
-                        <Link to={'/auth/register'} css={tw`text-primary-300 no-underline hover:text-primary-200`}>
-                            Register
+                        Already have an account?{' '}
+                        <Link to={'/auth/login'} css={tw`text-primary-300 no-underline hover:text-primary-200`}>
+                            Sign In
                         </Link>
                     </div>
                 </LoginFormContainer>
@@ -137,5 +173,3 @@ const LoginContainer = ({ history }: RouteComponentProps) => {
         </Formik>
     );
 };
-
-export default LoginContainer;

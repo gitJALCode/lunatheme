@@ -75,9 +75,14 @@
                                 <i class="fa fa-home"></i> <span>Overview</span>
                             </a>
                         </li>
-                        <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.settings') ?: 'active' }}">
+                        <li class="{{ ! (starts_with(Route::currentRouteName(), 'admin.settings') && Route::currentRouteName() !== 'admin.settings.store') ?: 'active' }}">
                             <a href="{{ route('admin.settings')}}">
                                 <i class="fa fa-wrench"></i> <span>Settings</span>
+                            </a>
+                        </li>
+                        <li class="{{ Route::currentRouteName() === 'admin.settings.store' ? 'active' : '' }}">
+                            <a href="{{ route('admin.settings.store') }}">
+                                <i class="fa fa-credit-card"></i> <span>Store</span>
                             </a>
                         </li>
                         <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.api') ?: 'active' }}">

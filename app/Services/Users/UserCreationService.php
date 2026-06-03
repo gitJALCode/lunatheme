@@ -29,7 +29,7 @@ class UserCreationService
      * @throws \Exception
      * @throws \Pterodactyl\Exceptions\Model\DataValidationException
      */
-    public function handle(array $data): User
+    public function handle(array $data, bool $sendNotification = true): User
     {
         if (array_key_exists('password', $data) && !empty($data['password'])) {
             $data['password'] = $this->hasher->make($data['password']);
@@ -51,7 +51,10 @@ class UserCreationService
         }
 
         $this->connection->commit();
-        $user->notify(new AccountCreated($user, $token ?? null));
+
+        if ($sendNotification) {
+            $user->notify(new AccountCreated($user, $token ?? null));
+        }
 
         return $user;
     }
